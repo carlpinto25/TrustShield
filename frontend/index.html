@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Anti-Phishing AI - Demo</title>
+</head>
+<body>
+  <h1>Anti-Phishing AI Backend - Demo</h1>
+  <p>Test all analysis endpoints. Results shown as raw JSON below each form.</p>
+  <hr>
+
+  <!-- TEXT -->
+  <h2>Text Analysis (phishing + URL detection)</h2>
+  <form id="textForm">
+    <label>Paste text or email body:<br>
+      <textarea id="textInput" rows="6" cols="80" placeholder="URGENT: Your account has been suspended. Click http://fake-bank.tk to verify..."></textarea>
+    </label><br>
+    <button type="submit">Analyze Text</button>
+  </form>
+  <pre id="textResult"></pre>
+  <hr>
+
+  <!-- IMAGE -->
+  <h2>Image Analysis (deepfake + phishing screenshot)</h2>
+  <form id="imageForm">
+    <label>Upload image (JPG, PNG, WEBP):<br>
+      <input type="file" id="imageInput" accept="image/*">
+    </label><br>
+    <button type="submit">Analyze Image</button>
+  </form>
+  <pre id="imageResult"></pre>
+  <hr>
+
+  <!-- VIDEO -->
+  <h2>Video Analysis (deepfake video detection)</h2>
+  <form id="videoForm">
+    <label>Upload video (MP4, WEBM):<br>
+      <input type="file" id="videoInput" accept="video/*">
+    </label><br>
+    <button type="submit">Analyze Video</button>
+    <span id="videoStatus"></span>
+  </form>
+  <pre id="videoResult"></pre>
+  <hr>
+
+  <!-- AUDIO -->
+  <h2>Audio Analysis (deepfake / AI voice detection)</h2>
+  <form id="audioForm">
+    <label>Upload audio (WAV, MP3, OGG):<br>
+      <input type="file" id="audioInput" accept="audio/*">
+    </label><br>
+    <button type="submit">Analyze Audio</button>
+  </form>
+  <pre id="audioResult"></pre>
+  <hr>
+
+  <!-- FILE (VirusTotal) -->
+  <h2>General File Analysis (PDF, ZIP, EXE, etc. via VirusTotal)</h2>
+  <form id="fileForm">
+    <label>Upload any suspicious file:<br>
+      <input type="file" id="fileInput">
+    </label><br>
+    <button type="submit">Analyze File</button>
+  </form>
+  <pre id="fileResult"></pre>
+
+
+  <script>
+    const BASE = "";
+
+    async function postJSON(url, body, resultId) {
+      const el = document.getElementById(resultId);
+      el.textContent = "Analyzing...";
+      try {
+        const res = await fetch(BASE + url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        el.textContent = JSON.stringify(data, null, 2);
+      } catch (e) {
+        el.textContent = "ERROR: " + e.message;
+      }
+    }
+
+    async function postFile(url, file, resultId, statusId) {
+      const el = document.getElementById(resultId);
+      const statusEl = statusId ? document.getElementById(statusId) : null;
+      el.textContent = "Uploading and analyzing...";
+      if (statusEl) statusEl.textContent = " (this may take 10-30s for video)";
+      const form = new FormData();
+      form.append("file", file);
+      try {
+        const res = await fetch(BASE + url, { method: "POST", body: form });
+        const data = await res.json();
+        el.textContent = JSON.stringify(data, null, 2);
+        if (statusEl) statusEl.textContent = "";
+      } catch (e) {
+        el.textContent = "ERROR: " + e.message;
+        if (statusEl) statusEl.textContent = "";
+      }
+    }
+
+    document.getElementById("textForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const text = document.getElementById("textInput").value.trim();
+      if (!text) return;
+      postJSON("/analyze/text", { text }, "textResult");
+    });
+
+    document.getElementById("imageForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const file = document.getElementById("imageInput").files[0];
+      if (!file) return;
+      postFile("/analyze/image", file, "imageResult", null);
+    });
+
+    document.getElementById("videoForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const file = document.getElementById("videoInput").files[0];
+      if (!file) return;
+      postFile("/analyze/video", file, "videoResult", "videoStatus");
+    });
+
+    document.getElementById("audioForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const file = document.getElementById("audioInput").files[0];
+      if (!file) return;
+      postFile("/analyze/audio", file, "audioResult", null);
+    });
+
+    document.getElementById("fileForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const file = document.getElementById("fileInput").files[0];
+      if (!file) return;
+      postFile("/analyze/file", file, "fileResult", null);
+    });
+  </script>
+</body>
+</html>
